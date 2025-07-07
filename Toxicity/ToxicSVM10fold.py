@@ -142,7 +142,7 @@ def split_folds(features, response, train_mask):
 
 
 
-def cross_validate_results(features, response, k, folds, standardize, seed,gamma=1,sampleWeights=None):
+def cross_validate_results(features, response, k, folds, standardize, seed,gamma=1,sampleWeights=False):
     """
     Train an L0-Regression for each fold and report the cross-validated MSE.
     """
@@ -168,7 +168,7 @@ def cross_validate_results(features, response, k, folds, standardize, seed,gamma
             scaler.fit(xtrain)
             xtrain = scaler.transform(xtrain)
             xtest = scaler.transform(xtest)
-        if sampleWeights is not None:
+        if (sampleWeights):
             weights = np.where(ytrain == 1,1.53,.74)
             equation = gurobiSVM(xtrain, ytrain,k,gamma=gamma,M=1000,L0Regularization=True,sampleWeights=weights)
         else:
@@ -260,7 +260,7 @@ client = genai.Client()
 #--------------------------------------------------DATA CLEANING-------------------------------------------------------
 
 #find dataset with 1000 features (genes?)
-df = pd.read_csv("Toxicity/ToxicityData.csv") 
+df = pd.read_csv("Toxicity/Toxicity-13F.csv") 
 #drop rows where the target is na
 df = df[~df["Class"].isna()]
 
@@ -279,8 +279,8 @@ y = pd.Series([1 if tox == "Toxic" else -1 for tox in y])
 
 
 TRIALS = 1 #this number of trials for each unique combination of feature amount and model type
-FEATURES = [20] #list of features to try [10,15,20]
-SvmFeatureAmount = 10
+FEATURES = [13] #list of features to try [10,15,20]
+SvmFeatureAmount = 13
 
 for DfFeatureAmount in FEATURES:
     #initialize lists to keep track of data
