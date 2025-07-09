@@ -17,6 +17,7 @@ from sklearn.metrics import f1_score, roc_auc_score,accuracy_score
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import ConfusionMatrixDisplay
 import matplotlib.pyplot as plt 
+from sklearn.ensemble import GradientBoostingClassifier
 random.seed(0)
 
 
@@ -140,7 +141,50 @@ def split_folds(features, response, train_mask):
     ytest = response[~train_mask]
     return xtrain, xtest, ytrain, ytest
 
-
+def cross_validate_resultsGBM(features, response, folds, standardize, seed,gamma=1,sampleWeights=None):
+    """
+    Train an L0-Regression for each fold and report the cross-validated MSE.
+    """
+    if seed is not None:
+        np.random.seed(seed)
+    samples, dim = features.shape
+    assert samples == response.shape[0]
+    fold_size = int(np.ceil(samples / folds))
+    # Randomly assign each sample to a fold
+    shuffled = np.random.choice(samples, samples, replace=False)
+    acc = 0
+    roc = 0
+    f1 = 0
+    # Exclude folds from training, one at a time, 
+    #to get out-of-sample estimates of the roc
+    for fold in range(folds):
+        idx = shuffled[fold * fold_size : min((fold + 1) * fold_size, samples)]
+        train_mask = np.ones(samples, dtype=bool)
+        train_mask[idx] = False
+        xtrain, xtest, ytrain, ytest = split_folds(features, response, train_mask)
+        if standardize:
+            scaler = StandardScaler()
+            scaler.fit(xtrain)
+            xtrain = scaler.transform(xtrain)
+            xtest = scaler.transform(xtest)
+        if sampleWeights is not None:
+            totalpos = sum(ytrain==1)
+            totalneg = sum(ytrain==-1)
+            posweight = (totalpos + totalneg)/(2*totalpos)
+            negweight = (totalpos + totalneg)/(2*totalneg)
+            weights = np.where(ytrain == 1,posweight,negweight) #n/2n(t)
+            model = GradientBoostingClassifier(n_estimators=10,max_depth=3,learning_rate=1,max_features=100,random_state=seed)
+            model = model.fit(xtrain,ytrain,sample_weight=weights)
+        else:
+            model = GradientBoostingClassifier(n_estimators=10,max_depth=3,learning_rate=1,max_features=100,random_state=seed)
+            model = model.fit(xtrain,ytrain)
+        
+        ypred = model.predict(xtest)
+        acc += accuracy_score(ytest,ypred)/folds
+        roc += roc_auc_score(ytest, ypred) / folds
+        f1 += f1_score(ytest,ypred)/folds
+    # Report the average out-of-sample roc
+    return acc,roc,f1
 
 def cross_validate_results(features, response, k, folds, standardize, seed,gamma=1,sampleWeights=False):
     """
@@ -171,8 +215,8 @@ def cross_validate_results(features, response, k, folds, standardize, seed,gamma
         if (sampleWeights):
             totalpos = sum(ytrain==1)
             totalneg = sum(ytrain==-1)
-            posweight = (totalpos + totalneg)/2*totalpos
-            negweight = (totalpos + totalneg)/2*totalneg
+            posweight = (totalpos + totalneg)/(2*totalpos)
+            negweight = (totalpos + totalneg)/(2*totalneg)
             weights = np.where(ytrain == 1,posweight,negweight) #n/2n(t)
             equation = gurobiSVM(xtrain, ytrain,k,gamma=gamma,M=1000,L0Regularization=True,sampleWeights=weights)
         else:
@@ -198,8 +242,8 @@ def TrainAppendResults(df,y,seed,results,model,SvmFeatureAmount):
     #split, standardize, train bss, and predict on specified df and seed, and append data to specified lists
 
     #with cross validation    
-    #acc,roc,f1 = cross_validate_results(X_std,y,k,10,False,seed,gamma=1,sampleWeights=weights)
     acc,roc,f1 = cross_validate_results(df.to_numpy(),y.to_numpy(),SvmFeatureAmount,10,True,seed,gamma=1,sampleWeights=True)
+    #acc,roc,f1 = cross_validate_resultsGBM(df.to_numpy(),y.to_numpy(),10,True,seed,gamma=1,sampleWeights=True)
 
     #append average of each value across 10 splits
     results[model]["acc"].append(acc)
