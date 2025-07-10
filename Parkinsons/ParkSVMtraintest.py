@@ -35,6 +35,7 @@ def GetLLMFeatures(contextFilepath, featuresToGet, features):
     with open(contextFilepath,"r") as f:
         context = f.read()
     #get full response
+    start = time.perf_counter()
     response = client.models.generate_content(
         model="gemini-2.5-flash",
         contents=f"""{context}\nYour Task:
@@ -44,6 +45,7 @@ def GetLLMFeatures(contextFilepath, featuresToGet, features):
                            These features should be selected based on their relevance and likelyhood to predict the variable given by and using the context. 
                            At least {n} of the available features should be returned. The only available features to be picked are given by the user, following this message.\n{", ".join(features)}""",
     )
+    end = time.perf_counter()
 
     #get chosen features
     LLMfeatures = response.text
@@ -51,20 +53,20 @@ def GetLLMFeatures(contextFilepath, featuresToGet, features):
     #print(LLMfeatures)
     finalFeatures = LLMfeatures.split(", ")
 
-    return finalFeatures
+    return finalFeatures,end -start
 
 def NarrowDownDFLLM(df,contextFilePath, featuresToGet):
     headers = df.columns.tolist()
 
     #get features chosen by llm
-    newHeaders = GetLLMFeatures(contextFilePath, featuresToGet,headers)
+    newHeaders,time = GetLLMFeatures(contextFilePath, featuresToGet,headers)
 
     valid_cols = list()
     for col in newHeaders:
         if col in df.columns and col not in valid_cols:
             valid_cols.append(col)
     valid_cols = valid_cols[:featuresToGet] #cut off any extra columns if llm included too many (they are ranked in order of importance so least important get cut off first )
-    return df[valid_cols].copy()
+    return df[valid_cols].copy(),time
 
 def gurobiSVM(X, y,k,gamma=1.0,M=1000,L0Regularization=False,sampleWeights =None):
     # Create a Gurobi environment and a model object
@@ -241,36 +243,71 @@ def findYPred(X,equation):
 def TrainAppendResults(df,y,seed,results,model,SvmFeatureAmount):
     #split, standardize, train bss, and predict on specified df and seed, and append data to specified lists
 
-    #with cross validation    
-    acc,roc,f1 = cross_validate_results(df.to_numpy(),y.to_numpy(),SvmFeatureAmount,10,True,seed,gamma=1,sampleWeights=True)
-    #acc,roc,f1 = cross_validate_resultsGBM(df.to_numpy(),y.to_numpy(),10,True,seed,gamma=1,sampleWeights=True)
+    X_train, X_test, y_train, y_test = train_test_split(df, y, test_size=0.2, stratify=y,random_state = seed)
 
-    #append average of each value across 10 splits
-    results[model]["acc"].append(acc)
-    results[model]["roc"].append(roc)
-    results[model]["f1"].append(f1)
+    #standardize test and train sep
+    scaler = StandardScaler()
+    scaler.fit(X_train)
+    X_train_std = scaler.transform(X_train)
+    X_test_std = scaler.transform(X_test)
+
+    #or with cross validation
+    #equation = gurobiSVM(X_train_std, y_train.to_numpy(),k,gamma=1,M=1000,L0Regularization=True)#uses featureAmount for k, or col dim if smaller
+    
+    totalpos = sum(y_train==1)
+    totalneg = sum(y_train==-1)
+    posweight = (totalpos + totalneg)/(2*totalpos)
+    negweight = (totalpos + totalneg)/(2*totalneg)
+    weights = np.where(y_train == 1,posweight,negweight) #n/2n(t)
+    start = time.perf_counter()
+    equation = gurobiSVM(X_train_std, y_train.to_numpy(),SvmFeatureAmount,gamma=1,M=1000,L0Regularization=True,sampleWeights=weights)
+    end = time.perf_counter()
+    # Predict and evaluate (@ is matrix multiplication) #headers? array types?
+
+    y_pred = findYPred(X_test_std,equation)
+
+    results[model]["acc"].append(accuracy_score(y_test, y_pred))
+    results[model]["roc"].append(roc_auc_score(y_test, y_pred))
+    results[model]["f1"].append(f1_score(y_test, y_pred))
 
     # cm = confusion_matrix(y_test, y_pred)
     # disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=['NonToxic','Toxic'])
     # disp.plot()
     # plt.show()
 
+    #add training results
+    y_pred = findYPred(X_train_std,equation)
+
+    results[f"{model}train"]["acc"].append(accuracy_score(y_train, y_pred))
+    results[f"{model}train"]["roc"].append(roc_auc_score(y_train, y_pred))
+    results[f"{model}train"]["f1"].append(f1_score(y_train, y_pred))
+
+    #return weights to use for matched feature comparison
+    return equation["a"],end -start
+
+def match_features(givenFeatures,otherFeatures):
+    """otherFeatures is the features that givenFeatures is being compared to (SVM)"""
+    totalMatched = sum(1 for feature in givenFeatures if feature in otherFeatures)
+    return totalMatched/len(givenFeatures)
 
 def save_results(results,ModelName,p,k,trials):
     output = {
             'acc': results[ModelName]['acc'],
             'roc': results[ModelName]['roc'],
             'f1': results[ModelName]["f1"],
-            "time (sec)": results[ModelName]['timing'],
-            'features used': [k] * trials
         }
-    if ModelName in ["LLM"]:
+    if "LLM time" in results[ModelName]:
+        output["LLM time (sec)"]= results[ModelName]['LLM time']
+    if "training time" in results[ModelName]:
+        output["training time (sec)"]= results[ModelName]['training time']
+    if "features used" in results[ModelName]:
+        output["feaures used"] =results[ModelName]["features used"]
+    if ModelName in ["LLMtrain"]:
         output["features chosen by LLM"] = results[ModelName]["featuresChosenByLLM"] #extra column that tells how many features the llm returns (should be equal to features specified, but may not be if LLM didn't listen)
     if "matched features" in results[ModelName]:
         output["features matched to SVM"] = results[ModelName]["matched features"]
-    if ModelName in ["LLM","Rand"]:
+    if ModelName in ["LLMtrain","Randtrain"]:
         output["features specified"] = [p] *trials #make a TRIAL long list of the number 'feature'
-
     pd.DataFrame(output).to_csv(f'output{ModelName}p{p}k{k}.csv', index=True)
 
 def run_trial(model,df,y,seed,DfFeatureAmount,results,SvmFeatureAmount,contextFile=None,otherFeatureNames=None):
@@ -282,23 +319,45 @@ def run_trial(model,df,y,seed,DfFeatureAmount,results,SvmFeatureAmount,contextFi
             currdf = df
         case "LLM":
             #get newdf with chosen columns using llm 
-            currdf = NarrowDownDFLLM(df,contextFile,DfFeatureAmount) #here is where you specify how many features the LLM should choose
-        
+            currdf,LLMtime = NarrowDownDFLLM(df,contextFile,DfFeatureAmount) #here is where you specify how many features the LLM should choose
             #find number of features chosen by llm, make sure its not 0
             llmFeatureAmount = currdf.shape[1]
             print("Number of columsn:" ,llmFeatureAmount)
             if llmFeatureAmount < 1:
                 print(f"LLM didn't give any features") #error
-            results["LLM"]["featuresChosenByLLM"].append(llmFeatureAmount)
+            results["LLMtrain"]["featuresChosenByLLM"].append(llmFeatureAmount)
         case "Rand":
             currdf = df[random.sample(df.columns.tolist(),DfFeatureAmount)].copy()
 
     #2 trainappend results
-    start = time.perf_counter()
-    TrainAppendResults(currdf,y,seed,results,model,SvmFeatureAmount)
+
+    Coef,trainTime = TrainAppendResults(currdf,y,seed,results,model,SvmFeatureAmount)
     #record time of whole trial
-    end = time.perf_counter()
-    results[model]["timing"].append((end -start)/10)
+    
+    results[f"{model}train"]["training time"].append(trainTime)
+    if model == "LLM":
+        results[f"{model}train"]["LLM time"].append(LLMtime)
+
+    #find the number of features used
+    totalfeaturesused = 0
+    for i in range(len(Coef)):
+        if Coef[i] != 0:
+            totalfeaturesused +=1
+    results[f"{model}train"]["features used"].append(totalfeaturesused)
+
+    if model == "SVM":
+        ChosenFeatureNames = list()
+        for i in range(len(currdf.columns)):
+            if Coef[i] != 0:
+                ChosenFeatureNames.append(currdf.columns[i])
+        return ChosenFeatureNames
+    else:
+        #find matched features with BSS
+        if otherFeatureNames is not None:
+            #do just for train
+            if "matched features" not in results[f"{model}train"]:
+                results[f"{model}train"]["matched features"] = list()
+            results[f"{model}train"]["matched features"].append(match_features(currdf.columns,otherFeatureNames))
                 
 
 
@@ -334,24 +393,28 @@ DfFeatureAmount = 20 #list of features to try [10,15,20]
 SvmFeatureAmount = 10
 
 results = {
-    'SVM' : {"acc":[],"roc":[],"f1":[],"timing": []},
-    'LLM' : {"acc":[],"roc":[],"f1":[],"timing": [],"featuresChosenByLLM":[]},
-    'Rand' : {"acc":[],"roc":[],"f1":[],"timing": []}
+    'SVM' : {"acc":[],"roc":[],"f1":[]},
+    'LLM' : {"acc":[],"roc":[],"f1":[]},
+    'Rand' : {"acc":[],"roc":[],"f1":[]},
+    'SVMtrain' : {"acc":[],"roc":[],"f1":[],"training time": [],'features used':[]},
+    'LLMtrain' : {"acc":[],"roc":[],"f1":[],"LLM time":[],"training time": [],'features used':[],"featuresChosenByLLM":[]},
+    'Randtrain' : {"acc":[],"roc":[],"f1":[],"training time": [],'features used':[]}
 }
 
 
 currTrial = 0
 while currTrial < TRIALS:
-    run_trial("SVM",df,y,currTrial,DfFeatureAmount,results,SvmFeatureAmount) 
+    SVMChosenFeatureNames = run_trial("SVM",df,y,currTrial,DfFeatureAmount,results,SvmFeatureAmount) 
 
     #///////[LLM]\\\\\\\
-    run_trial("LLM",df,y,currTrial,DfFeatureAmount,results,SvmFeatureAmount,contextFile="Parkinsons/contextPark.txt")
+    run_trial("LLM",df,y,currTrial,DfFeatureAmount,results,SvmFeatureAmount,contextFile="Parkinsons/contextPark.txt",otherFeatureNames=SVMChosenFeatureNames)
 
 
     #///////[Rand]\\\\\\\
-    run_trial("Rand",df,y,currTrial,DfFeatureAmount,results,SvmFeatureAmount)
+    run_trial("Rand",df,y,currTrial,DfFeatureAmount,results,SvmFeatureAmount,otherFeatureNames=SVMChosenFeatureNames)
     
     currTrial += 1
 
 for model in ["SVM","LLM","Rand"]:
     save_results(results,model,DfFeatureAmount,SvmFeatureAmount,TRIALS)
+    save_results(results,f"{model}train",DfFeatureAmount,SvmFeatureAmount,TRIALS)
