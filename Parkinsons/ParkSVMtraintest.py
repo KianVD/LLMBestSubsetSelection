@@ -1,5 +1,6 @@
 #Toxic dataset gemini
 from google import genai
+from openai import OpenAI
 import pandas as pd
 import numpy as np
 from dotenv import load_dotenv
@@ -29,7 +30,35 @@ options = {
 
 env = gp.Env(params=options)
 
-def GetLLMFeatures(contextFilepath, featuresToGet, features):
+
+def GetLLMFeaturesOpenAI(contextFilepath, featuresToGet, features):
+    #now feed headers and context to chatgpt and ask it to return which n features to include in readable format
+    n = featuresToGet # f string doesn't work for some reason
+    with open(contextFilepath,"r") as f:
+        context = f.read()
+    #get full response
+    start = time.perf_counter()
+    response = client.chat.completions.create(
+                model = "gpt-3.5-turbo", #gpt-3.5-turbo, gpt-4o
+                messages=[{"role":"developer","content": context + f"""Your Task:
+                            Please print only a list of the available features in the order of their significance to predicting the desired variable, listing the most significant first, based on the above data. 
+                           This list should be in a csv format, seperating features with a comma then a space, maintaining the exact feature names including capitalization.
+                            For example, when given a list of features: FeaTure2, feature1, ftr3 : you would return the following: feature1, FeaTure2, ftr3, etc. in that format, ordered by significance.
+                           These features should be selected based on their relevance and likelyhood to predict the variable given by and using the context. 
+                           At least {n} of the available features should be returned. The only available features to be picked are given by the user, following this message."""},
+                        {"role":"user","content":", ".join(features)},
+                ],
+            )
+    end = time.perf_counter()
+    #get chosen features
+    LLMfeatures = response.choices[0].message.content
+
+    #print(LLMfeatures)
+    finalFeatures = LLMfeatures.split(", ")
+
+    return finalFeatures,end -start
+
+def GetLLMFeaturesGemini(contextFilepath, featuresToGet, features):
     #now feed headers and context to chatgpt and ask it to return which n features to include in readable format
     n = featuresToGet # f string doesn't work for some reason
     with open(contextFilepath,"r") as f:
@@ -59,7 +88,7 @@ def NarrowDownDFLLM(df,contextFilePath, featuresToGet):
     headers = df.columns.tolist()
 
     #get features chosen by llm
-    newHeaders,time = GetLLMFeatures(contextFilePath, featuresToGet,headers)
+    newHeaders,time = GetLLMFeaturesOpenAI(contextFilePath, featuresToGet,headers)
 
     valid_cols = list()
     for col in newHeaders:
@@ -367,6 +396,12 @@ apikey = os.getenv("GEMAPIKEY")
 os.environ['GEMINI_API_KEY'] = apikey
 client = genai.Client()
 
+#set open ai api key
+load_dotenv(dotenv_path="APIKEY.env")
+client = OpenAI(
+    api_key = os.getenv("APIKEY")
+)
+
 #--------------------------------------------------DATA CLEANING-------------------------------------------------------
 
 #find dataset with 1000 features (genes?)
@@ -389,8 +424,8 @@ y = pd.Series([-1 if cla == 1 else 1 for cla in y])
 
 
 TRIALS = 10 #this number of trials for each unique combination of feature amount and model type
-DfFeatureAmount = 20 #list of features to try [10,15,20]
-SvmFeatureAmount = 10
+DfFeatureAmount = 100 #list of features to try [10,15,20]
+SvmFeatureAmount = 50
 
 results = {
     'SVM' : {"acc":[],"roc":[],"f1":[]},
