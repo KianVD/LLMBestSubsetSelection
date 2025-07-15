@@ -15,3 +15,5 @@
 9) (C) Toxicity: https://archive.ics.uci.edu/dataset/728/toxicity-2 (This one looks promising ...)
 
 10) (R) MOF (RAC): https://www.kaggle.com/datasets/marquis03/metal-organic-frame-materials-prediction?select=mof_round1_train_v2_230725
+
+11) (C) Park: https://archive.ics.uci.edu/dataset/470/parkinson+s+disease+classification
