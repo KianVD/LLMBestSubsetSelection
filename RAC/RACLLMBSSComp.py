@@ -269,7 +269,7 @@ client = OpenAI(
 #find dataset with 1000 features (genes?)
 df = pd.read_csv("RAC/RAC_train.csv") 
 #drop rows where the target is na
-df = df[~df["temperature"].isna()]
+df = df[~df["param2"].isna()]
 
 
 #drop mof cat column
@@ -280,8 +280,8 @@ numerical_cols = df.select_dtypes(include='number').columns.tolist()
 #fillna for numerical
 df[numerical_cols] = df[numerical_cols].fillna(df[numerical_cols].mean())
 #separate target and df
-y = df["temperature"]
-df.drop("temperature",axis=1,inplace=True)
+y = df["param2"]
+df.drop("param2",axis=1,inplace=True)
 
 #--------------------------------------------------MODEL TRAINING-------------------------------------------------------
 
