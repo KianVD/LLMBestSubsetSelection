@@ -19,8 +19,6 @@ from sklearn.metrics import confusion_matrix
 from sklearn.metrics import ConfusionMatrixDisplay
 import matplotlib.pyplot as plt 
 from sklearn.ensemble import GradientBoostingClassifier
-random.seed(0)
-
 
 options = {
 "WLSACCESSID":"a9ee3346-4b70-4d35-a517-fe1941ffe2ef",
@@ -38,7 +36,7 @@ def GetLLMFeaturesOpenAI(contextFilepath, featuresToGet, features):
         context = f.read()
     #get full response
     start = time.perf_counter()
-    response = client.chat.completions.create(
+    response = clientOpenAI.chat.completions.create(
                 model = "gpt-3.5-turbo", #gpt-3.5-turbo, gpt-4o
                 messages=[{"role":"developer","content": context + f"""Your Task:
                             Please print only a list of the available features in the order of their significance to predicting the desired variable, listing the most significant first, based on the above data. 
@@ -88,7 +86,7 @@ def NarrowDownDFLLM(df,contextFilePath, featuresToGet):
     headers = df.columns.tolist()
 
     #get features chosen by llm
-    newHeaders,time = GetLLMFeaturesOpenAI(contextFilePath, featuresToGet,headers)
+    newHeaders,time = GetLLMFeaturesGemini(contextFilePath, featuresToGet,headers)
 
     valid_cols = list()
     for col in newHeaders:
@@ -397,8 +395,8 @@ os.environ['GEMINI_API_KEY'] = apikey
 client = genai.Client()
 
 #set open ai api key
-load_dotenv(dotenv_path="APIKEY.env")
-client = OpenAI(
+#load_dotenv(dotenv_path="APIKEY.env")
+clientOpenAI = OpenAI(
     api_key = os.getenv("APIKEY")
 )
 
@@ -424,8 +422,8 @@ y = pd.Series([-1 if cla == 1 else 1 for cla in y])
 
 
 TRIALS = 10 #this number of trials for each unique combination of feature amount and model type
-DfFeatureAmount = 100 #list of features to try [10,15,20]
-SvmFeatureAmount = 50
+DfFeatureAmount = 200 #list of features to try [10,15,20]
+SvmFeatureAmount = 100
 
 results = {
     'SVM' : {"acc":[],"roc":[],"f1":[]},
@@ -439,6 +437,8 @@ results = {
 
 currTrial = 0
 while currTrial < TRIALS:
+    random.seed(currTrial)
+    
     SVMChosenFeatureNames = run_trial("SVM",df,y,currTrial,DfFeatureAmount,results,SvmFeatureAmount) 
 
     #///////[LLM]\\\\\\\

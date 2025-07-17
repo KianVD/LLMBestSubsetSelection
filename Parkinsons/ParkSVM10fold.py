@@ -329,9 +329,9 @@ y = pd.Series([-1 if cla == 1 else 1 for cla in y])
 #--------------------------------------------------MODEL TRAINING-------------------------------------------------------
 
 
-TRIALS = 10 #this number of trials for each unique combination of feature amount and model type
-DfFeatureAmount = 20 #list of features to try [10,15,20]
-SvmFeatureAmount = 10
+TRIALS = 1 #this number of trials for each unique combination of feature amount and model type
+DfFeatureAmount = 100 #list of features to try [10,15,20]
+SvmFeatureAmount = 50
 
 results = {
     'SVM' : {"acc":[],"roc":[],"f1":[],"timing": []},
