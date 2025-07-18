@@ -207,7 +207,7 @@ def save_results(results,ModelName,p,k,trials):
     output = {
             'r2': results[ModelName]['r2'],
             'mse': results[ModelName]['mse'],
-            'rmse (Spotify Streams)': np.sqrt(results[ModelName]["mse"])
+            'rmse (param2)': np.sqrt(results[ModelName]["mse"])
         }
     if "LLM time" in results[ModelName]:
         output["LLM time (sec)"]= results[ModelName]['LLM time']
