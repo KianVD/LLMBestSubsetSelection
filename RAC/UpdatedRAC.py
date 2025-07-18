@@ -79,7 +79,7 @@ def miqp(features, response, non_zero, verbose=False):
         X = np.concatenate([features, np.ones((samples, 1))], axis=1)  
 
         # Decision variables
-        norm_0 = regressor.addVar(lb=non_zero, ub=non_zero, name="norm")
+        norm_0 = regressor.addVar(lb=0, ub=non_zero, name="norm")
         beta = regressor.addMVar((dim + 1,), lb=-GRB.INFINITY, name="beta") # Weights
         intercept = beta[dim] # Last decision variable captures the y-intercept
 
