@@ -13,10 +13,16 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import f1_score, roc_auc_score,accuracy_score
 
 # Use the OpenAI client library to add your API key.
-load_dotenv(dotenv_path="APIKEY.env")
+load_dotenv(dotenv_path=".env")
 client = OpenAI(
-    api_key = os.getenv("APIKEY")
+    api_key = os.getenv("GPTAPIKEY")
 )
+
+options = {
+"WLSACCESSID":os.getenv("WLSACCESSID"),
+"WLSSECRET":os.getenv("WLSSECRET"),
+"LICENSEID":int(os.getenv("LICENSEID")),
+}
 
 
 #find dataset with 1000 features (genes?)

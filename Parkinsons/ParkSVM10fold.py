@@ -21,10 +21,16 @@ from sklearn.ensemble import GradientBoostingClassifier
 random.seed(0)
 
 
+# Set GEMINI api key
+load_dotenv(dotenv_path=".env")
+apikey = os.getenv("GEMAPIKEY")
+os.environ['GEMINI_API_KEY'] = apikey
+client = genai.Client()
+
 options = {
-"WLSACCESSID":"a9ee3346-4b70-4d35-a517-fe1941ffe2ef",
-"WLSSECRET":"8c55cef6-a34c-436b-ab49-7de37868044b",
-"LICENSEID":2674818,
+"WLSACCESSID":os.getenv("WLSACCESSID"),
+"WLSSECRET":os.getenv("WLSSECRET"),
+"LICENSEID":int(os.getenv("LICENSEID")),
 }
 
 env = gp.Env(params=options)
@@ -300,13 +306,6 @@ def run_trial(model,df,y,seed,DfFeatureAmount,results,SvmFeatureAmount,contextFi
     end = time.perf_counter()
     results[model]["timing"].append((end -start)/10)
                 
-
-
-# Set GEMINI api key
-load_dotenv(dotenv_path="APIKEY.env")
-apikey = os.getenv("GEMAPIKEY")
-os.environ['GEMINI_API_KEY'] = apikey
-client = genai.Client()
 
 #--------------------------------------------------DATA CLEANING-------------------------------------------------------
 

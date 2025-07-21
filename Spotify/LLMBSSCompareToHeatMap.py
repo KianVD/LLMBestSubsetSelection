@@ -19,10 +19,19 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 random.seed(0)
 
+# Set GEMINI api key
+load_dotenv(dotenv_path=".env")
+apikey = os.getenv("GEMAPIKEY")
+os.environ['GEMINI_API_KEY'] = apikey
+client = genai.Client()
+clientOpenAI = OpenAI(
+    api_key = os.getenv("GPTAPIKEY")
+)
+
 options = {
-"WLSACCESSID":"a9ee3346-4b70-4d35-a517-fe1941ffe2ef",
-"WLSSECRET":"8c55cef6-a34c-436b-ab49-7de37868044b",
-"LICENSEID":2674818,
+"WLSACCESSID":os.getenv("WLSACCESSID"),
+"WLSSECRET":os.getenv("WLSSECRET"),
+"LICENSEID":int(os.getenv("LICENSEID")),
 }
 
 env = gp.Env(params=options)
@@ -338,14 +347,7 @@ def run_trial(model,df,y,seed,DfFeatureAmount,results,SvmFeatureAmount,contextFi
                 
 
 
-# Set GEMINI api key
-load_dotenv(dotenv_path="APIKEY.env")
-apikey = os.getenv("GEMAPIKEY")
-os.environ['GEMINI_API_KEY'] = apikey
-client = genai.Client()
-clientOpenAI = OpenAI(
-    api_key = os.getenv("APIKEY")
-)
+
 #--------------------------------------------------DATA CLEANING-------------------------------------------------------
 
 #find dataset with 1000 features (genes?)

@@ -21,10 +21,16 @@ import matplotlib.pyplot as plt
 random.seed(0)
 
 
+# Set GEMINI api key
+load_dotenv(dotenv_path=".env")
+client = OpenAI(
+    api_key = os.getenv("GPTAPIKEY")
+)
+
 options = {
-"WLSACCESSID":"a9ee3346-4b70-4d35-a517-fe1941ffe2ef",
-"WLSSECRET":"8c55cef6-a34c-436b-ab49-7de37868044b",
-"LICENSEID":2674818,
+"WLSACCESSID":os.getenv("WLSACCESSID"),
+"WLSSECRET":os.getenv("WLSSECRET"),
+"LICENSEID":int(os.getenv("LICENSEID")),
 }
 
 env = gp.Env(params=options)
@@ -331,14 +337,7 @@ def run_trial(model,df,y,seed,featureAmount,results,contextFile=None,otherFeatur
             if "matched features" not in results[f"{model}train"]:
                 results[f"{model}train"]["matched features"] = list()
             results[f"{model}train"]["matched features"].append(match_features(currdf.columns,otherFeatureNames))
-                
-
-
-# Use the OpenAI client library to add your API key.
-load_dotenv(dotenv_path="APIKEY.env")
-client = OpenAI(
-    api_key = os.getenv("APIKEY")
-)
+            
 
 #--------------------------------------------------DATA CLEANING-------------------------------------------------------
 

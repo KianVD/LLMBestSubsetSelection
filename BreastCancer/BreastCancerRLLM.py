@@ -10,6 +10,19 @@ from sklearn.preprocessing import LabelEncoder
 le = LabelEncoder()
 from sklearn.linear_model import Lasso
 
+
+# Set GEMINI api key
+load_dotenv(dotenv_path=".env")
+client = OpenAI(
+    api_key = os.getenv("GPTAPIKEY")
+)
+
+options = {
+"WLSACCESSID":os.getenv("WLSACCESSID"),
+"WLSSECRET":os.getenv("WLSSECRET"),
+"LICENSEID":int(os.getenv("LICENSEID")),
+}
+
 def GetLLMFeatures(contextFilepath, featuresToGet, features):
     #now feed headers and context to chatgpt and ask it to return which n features to include in readable format
     n = featuresToGet # f string doesn't work for some reason
@@ -50,11 +63,6 @@ def NarrowDownDFLLM(df,contextFilePath, featuresToGet):
     return df[valid_cols].copy()
 
 
-# Use the OpenAI client library to add your API key.
-load_dotenv(dotenv_path="APIKEY.env")
-client = OpenAI(
-    api_key = os.getenv("APIKEY")
-)
 
 #find dataset with 1000 features (genes?)
 df = pd.read_csv("BreastCancer/METABRIC_RNA_Mutation.csv")
