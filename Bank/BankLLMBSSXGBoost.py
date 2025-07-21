@@ -17,12 +17,17 @@ import xgboost as xgb
 from sklearn.linear_model import LogisticRegressionCV
 
 
-options = {
-"WLSACCESSID":"a9ee3346-4b70-4d35-a517-fe1941ffe2ef",
-"WLSSECRET":"8c55cef6-a34c-436b-ab49-7de37868044b",
-"LICENSEID":2674818,
-}
+# Set GEMINI api key
+load_dotenv(dotenv_path=".env")
+client = OpenAI(
+    api_key = os.getenv("GPTAPIKEY")
+)
 
+options = {
+"WLSACCESSID":os.getenv("WLSACCESSID"),
+"WLSSECRET":os.getenv("WLSSECRET"),
+"LICENSEID":int(os.getenv("LICENSEID")),
+}
 env = gp.Env(params=options)
 
 def GetLLMFeatures(contextFilepath, featuresToGet, features):
@@ -161,11 +166,6 @@ def L0_regression(features, response, folds=5, standardize=False, seed=None):
     intercept, beta = miqp(features, response, best)
     return intercept, beta
 
-# Use the OpenAI client library to add your API key.
-load_dotenv(dotenv_path="APIKEY.env")
-client = OpenAI(
-    api_key = os.getenv("APIKEY")
-)
 
 #find dataset with 1000 features (genes?)
 df = pd.read_csv("Bank/bank-additional-full.csv",sep=";") 
