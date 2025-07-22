@@ -1,18 +1,9 @@
-(R = regression, C = Classification)
-1) (C) Swarm Behaviour: https://www.kaggle.com/datasets/deepcontractor/swarm-behaviour-classification?select=Swarm_Behaviour.csv 
-
-2) (R) Breast Cancer: https://www.kaggle.com/datasets/raghadalharbi/breast-cancer-gene-expression-profiles-metabric
-
-//datasets from llmlasso paper
+//small datasets
 3) (R) Spotify: https://www.kaggle.com/datasets/nelgiriyewithana/most-streamed-spotify-songs-2024/data
-4) (R) Wine: https://www.kaggle.com/datasets/yasserh/wine-quality-dataset 
-5) (C) Diabetes: https://www.kaggle.com/datasets/uciml/pima-indians-diabetes-database 
-6) (C) Bank: https://archive.ics.uci.edu/dataset/222/bank+marketing 
+
 7) (C) Glioma: https://archive.ics.uci.edu/dataset/759/glioma+grading+clinical+and+mutation+features+dataset 
 
-//trying to find large meaningful feature datasets
-8) (C) Ads: https://archive.ics.uci.edu/dataset/51/internet+advertisements
-9) (C) Toxicity: https://archive.ics.uci.edu/dataset/728/toxicity-2 (This one looks promising ...)
+//big datasets
 
 10) (R) MOF (RAC): https://www.kaggle.com/datasets/marquis03/metal-organic-frame-materials-prediction?select=mof_round1_train_v2_230725
 
