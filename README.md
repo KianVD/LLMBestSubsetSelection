@@ -19,3 +19,7 @@
     $change which models should run if desired
 
     $The LLMBSS framework will generate several .csv files, with a testing and training results file for each model
+
+*more information*
+
+    $The link to my LLMBSS articles is here: <link>
