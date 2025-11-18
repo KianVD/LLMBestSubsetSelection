@@ -22,4 +22,4 @@
 
 *more information*
 
-    $The link to my LLMBSS articles is here: <link>
+    $My LLMBSS article is in the repository as LLMBSSArticle.pdf
