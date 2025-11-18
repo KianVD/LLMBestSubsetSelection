@@ -22,4 +22,4 @@
 
 *more information*
 
-    $The link to my LLMBSS article is here: https://kianvd.github.io/LLMBSSArticle/LLMBSSArticle.pdf 
+    $The link to my LLMBSS article is here: [LLMBSSArticle](https://kianvd.github.io/LLMBSSArticle/LLMBSSArticle.pdf)
