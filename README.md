@@ -22,4 +22,4 @@
 
 *more information*
 
-    $My LLMBSS article is in the repository as LLMBSSArticle.pdf
+    $The link to my LLMBSS article is here: https://kianvd.github.io/LLMBSSArticle/LLMBSSArticle.pdf 
